@@ -4,9 +4,11 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 admin.initializeApp();
 
+// FireStoreの参照
+const fs = admin.firestore();
+
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
-
 
 export const addMessage = functions.https.onRequest(async (req, res) => {
     // query param
@@ -27,6 +29,21 @@ export const makeUppercase = functions.database.ref('/messages/{pushId}/original
     return snapshot.ref.parent.child('uppercase').set(uppercase);
 });
 
+// addToFirestore
+export const addToFirestore = functions.https.onRequest(async (req, res) => {
+    // query param
+//    const intimeString = req.query.in;
+    const inDate: Date = new Date();
+    await fs.collection('attendance').doc(inDate.toDateString()).set({
+        year: inDate.getFullYear(),
+        month: inDate.getMonth(),
+        date: inDate.getDate()
+    }).then((documentRef) => {
+        res.send("add date: " + inDate.toString());
+    });
+});
+
+
 export const fizzbuzz = functions.https.onRequest((request, response) => {
     // without type
     let fb = ""
@@ -43,7 +60,6 @@ export const fizzbuzz = functions.https.onRequest((request, response) => {
         fb += " ";
     }
     response.send(fb);
-
     // use type
-
 });
+
