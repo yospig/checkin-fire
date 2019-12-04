@@ -6,6 +6,8 @@ admin.initializeApp();
 
 // FireStoreの参照
 const fs = admin.firestore();
+const settings = { timestampsInSnapshots: true };
+fs.settings(settings);
 
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
@@ -29,20 +31,34 @@ export const makeUppercase = functions.database.ref('/messages/{pushId}/original
     return snapshot.ref.parent.child('uppercase').set(uppercase);
 });
 
-// addToFirestore
-export const addToFirestore = functions.https.onRequest(async (req, res) => {
+// SaveDateTime
+export const SaveDateTime = functions.https.onRequest(async (req, res) => {
+    const now: any = admin.firestore.FieldValue.serverTimestamp();
     // query param
 //    const intimeString = req.query.in;
-    const inDate: Date = new Date();
-    await fs.collection('attendance').doc(inDate.toDateString()).set({
-        year: inDate.getFullYear(),
-        month: inDate.getMonth(),
-        date: inDate.getDate()
-    }).then((documentRef) => {
-        res.send("add date: " + inDate.toString());
+
+    // FIX: it is UTC... need JST
+    //      year, month, day, hour are wrong.
+    const setDate: Date = new Date();
+    const currentMonth: number = setDate.getMonth() + 1;
+    // TODO: want to use formatter to doc name
+    const dateDocName: string = setDate.getFullYear().toString() + currentMonth.toString() + setDate.getDate().toString()
+    const dateDocRef = fs.collection('attendance').doc(dateDocName);
+    await dateDocRef.set({
+        year: setDate.getFullYear(),
+        month: currentMonth,
+        day: setDate.getDate(),
+        timestamp: now
+    });
+    const dateUnderUserDocRef = dateDocRef.collection('user').doc('yospig');
+    await dateUnderUserDocRef.set({
+        in_hour: setDate.getHours(),
+        in_min: setDate.getMinutes(),
+        timestamp: now
+    }).then(() => {
+        res.send("Add Successful: " + setDate.toDateString());
     });
 });
-
 
 export const fizzbuzz = functions.https.onRequest((request, response) => {
     // without type
