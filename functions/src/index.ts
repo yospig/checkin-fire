@@ -107,7 +107,6 @@ export const fetchDateDoc = functions.https.onRequest(async (req, res) => {
     ).then(resDoc => {
         if (resDoc.exists) {
             res.send(resDoc.data());
-
         } else {
             res.send("document is not exist");
         }
