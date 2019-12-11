@@ -118,6 +118,29 @@ export const fetchUserDoc = functions.https.onRequest(async (req, res) => {
     });
 });
 
+// fetchUsersDocs is a day for all users
+export const fetchUsersDocs = functions.https.onRequest(async (req, res) => {
+    // query param
+    const paramDay: string = req.query.d;
+    console.log(paramDay);
+    await admin.firestore().collection('attendance').doc(paramDay).collection('user').get(
+    ).then(
+        function (querySnapshot) {
+            let doc: {
+                [key: string]: any;
+            } = {}
+            querySnapshot.forEach(function (resDoc) {
+                console.log(resDoc.id, " => ", resDoc.data());
+                doc[resDoc.id] = resDoc.data();
+            });
+            res.send(doc);
+        }
+    ).catch((error) => {
+        res.status(500).send("can't fetch docs");
+    });
+});
+
+
 // fizzbuzz is test function
 export const fizzbuzz = functions.https.onRequest((request, response) => {
     const fb: Array<string | number> = [];
