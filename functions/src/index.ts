@@ -9,6 +9,8 @@ const fs = admin.firestore();
 const settings = { timestampsInSnapshots: true };
 fs.settings(settings);
 
+const defaultUser: string = `yospig`;
+
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
 
@@ -48,7 +50,7 @@ export const CheckInTime = functions.https.onRequest(async (req, res) => {
         timestamp: now
     });
     // TODO: Should be separated
-    const user: string = (req.query.user !== null) ? req.query.user : 'yospig';
+    const user: string = (req.query.user !== null) ? req.query.user : defaultUser;
     const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
     // merge指定なしの場合とupdateはintimeで値が入っていてもdocumentすべて上書きになる
     await dateUnderUserDocRef.set({
@@ -88,7 +90,7 @@ export const CheckOutTime = functions.https.onRequest(async (req, res) => {
         dateDoc,{merge:true}
     );
     // TODO: Should be separated
-    const user: string = (req.query.user !== null) ? req.query.user : 'yospig';
+    const user: string = (req.query.user !== null) ? req.query.user : defaultUser;
     const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
     // merge指定しているのでinTimeの値は上書きされない
     await dateUnderUserDocRef.set(
@@ -99,30 +101,21 @@ export const CheckOutTime = functions.https.onRequest(async (req, res) => {
     });
 });
 
-export const fetchDateDoc = functions.https.onRequest(async (req, res) => {
+// fetchUserDoc is a day for a one user
+export const fetchUserDoc = functions.https.onRequest(async (req, res) => {
     // query param
-    const day: string = req.query.day;
-    console.log(day)
-    await admin.firestore().collection('attendance').doc(day).get(
+    const paramDay: string = req.query.d;
+    const paramUser: string = req.query.u;
+    const user: string = (paramUser != null) ? paramUser : defaultUser;
+    console.log(paramDay, user);
+    await admin.firestore().collection('attendance').doc(paramDay).collection('user').doc(user).get(
     ).then(resDoc => {
         if (resDoc.exists) {
             res.send(resDoc.data());
         } else {
-            res.send("document is not exist");
+            res.status(404).send("document is not exist");
         }
     });
-    // const user: string = req.query.user;
-    // const year: string = day.substr(0,4);
-    // await admin.firestore().collection('attendance').orderBy('id').startAt(year).endAt(year+'\uf8ff').get()
-    // .then(function(querySnapshot) {
-    //     querySnapshot.forEach(function(doc) {
-    //         console.log(doc.id, " => ", doc.data());
-    //         res.send(JSON.stringify(doc));
-    //     });
-    // })
-    // .catch(function(error) {
-    //     console.log("Error getting documents: ", error);
-    // });
 });
 
 // fizzbuzz is test function
