@@ -50,7 +50,7 @@ export const CheckInTime = functions.https.onRequest(async (req, res) => {
         timestamp: now
     });
     // TODO: Should be separated
-    const user: string = (req.query.user !== null) ? req.query.user : defaultUser;
+    const user: string = (req.query.u !== null) ? req.query.u : defaultUser;
     const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
     // merge指定なしの場合とupdateはintimeで値が入っていてもdocumentすべて上書きになる
     await dateUnderUserDocRef.set({
@@ -90,7 +90,7 @@ export const CheckOutTime = functions.https.onRequest(async (req, res) => {
         dateDoc,{merge:true}
     );
     // TODO: Should be separated
-    const user: string = (req.query.user !== null) ? req.query.user : defaultUser;
+    const user: string = (req.query.u !== null) ? req.query.u : defaultUser;
     const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
     // merge指定しているのでinTimeの値は上書きされない
     await dateUnderUserDocRef.set(
@@ -106,7 +106,7 @@ export const fetchUserDoc = functions.https.onRequest(async (req, res) => {
     // query param
     const paramDay: string = req.query.d;
     const paramUser: string = req.query.u;
-    const user: string = (paramUser != null) ? paramUser : defaultUser;
+    const user: string = (paramUser !== null) ? paramUser : defaultUser;
     console.log(paramDay, user);
     await admin.firestore().collection('attendance').doc(paramDay).collection('user').doc(user).get(
     ).then(resDoc => {
@@ -126,7 +126,7 @@ export const fetchUsersDocs = functions.https.onRequest(async (req, res) => {
     await admin.firestore().collection('attendance').doc(paramDay).collection('user').get(
     ).then(
         function (querySnapshot) {
-            let doc: {
+            const doc: {
                 [key: string]: any;
             } = {}
             querySnapshot.forEach(function (resDoc) {
@@ -140,6 +140,42 @@ export const fetchUsersDocs = functions.https.onRequest(async (req, res) => {
     });
 });
 
+// makeUserBaseInOut trigger is user base data to ``
+export const makeUserBaseInOut = functions.firestore.document("/attendance/{dateId}/user/{userId}").onWrite(async (change, context) => {
+    const after = change.after.data();
+    const userBaseRef = fs.collection('attendance_user').doc(context.params.userId).collection('date').doc(context.params.dateId);
+    // console.log('change.after.data() is', change.after.data());
+    // console.log('userBaseRef is', fs.collection('attendance_user').doc(context.params.userId));
+    interface DateDTO {
+        in: {
+            in_time_str: string;
+            in_hour: number;
+            in_min: number;
+        }
+        out: {
+            out_time_str: string;
+            out_hour: number;
+            out_min: number;
+        }
+    }
+    if(after){
+        const d: DateDTO = {
+            in: {
+                in_time_str: after.in_time_str,
+                in_hour: 9,
+                in_min: 0
+            },
+            out: {
+                out_time_str: "17:30",
+                out_hour: 17,
+                out_min: 30
+            }
+        };
+        await userBaseRef.set(
+            d,{merge:true}
+        );
+    }
+});
 
 // fizzbuzz is test function
 export const fizzbuzz = functions.https.onRequest((request, response) => {
