@@ -141,11 +141,10 @@ export const fetchUsersDocs = functions.https.onRequest(async (req, res) => {
 });
 
 // makeUserBaseInOut trigger is user base data to ``
+// TODO Should be divide onWrite to onCreate and onUpdate
 export const makeUserBaseInOut = functions.firestore.document("/attendance/{dateId}/user/{userId}").onWrite(async (change, context) => {
     const after = change.after.data();
     const userBaseRef = fs.collection('attendance_user').doc(context.params.userId).collection('date').doc(context.params.dateId);
-    // console.log('change.after.data() is', change.after.data());
-    // console.log('userBaseRef is', fs.collection('attendance_user').doc(context.params.userId));
     interface DateDTO {
         in: {
             in_time_str: string;
@@ -158,17 +157,23 @@ export const makeUserBaseInOut = functions.firestore.document("/attendance/{date
             out_min: number;
         }
     }
-    if(after){
+    if (after) {
+        const in_time_str: string = after.in_time !== undefined ? after.in_time_str : "";
+        const in_hour: number = after.in_time !== undefined ? after.in_time.in_hour : 0;
+        const in_min: number = after.in_time !== undefined ? after.in_time.in_min : 0;
+        const out_time_str: string = after.out_time !== undefined ? after.out_time_str : "";
+        const out_hour: number = after.out_time !== undefined ? after.out_time.out_hour : 0;
+        const out_min: number = after.out_time !== undefined ? after.out_time.out_min : 0;
         const d: DateDTO = {
             in: {
-                in_time_str: after.in_time_str,
-                in_hour: 9,
-                in_min: 0
+                in_time_str: in_time_str,
+                in_hour: in_hour,
+                in_min: in_min
             },
             out: {
-                out_time_str: "17:30",
-                out_hour: 17,
-                out_min: 30
+                out_time_str: out_time_str,
+                out_hour: out_hour,
+                out_min: out_min
             }
         };
         await userBaseRef.set(
