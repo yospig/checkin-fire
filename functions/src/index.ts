@@ -118,8 +118,8 @@ export const fetchUserDoc = functions.https.onRequest(async (req, res) => {
     });
 });
 
-// fetchUsersDocs is a day for all users
-export const fetchUsersDocs = functions.https.onRequest(async (req, res) => {
+// fetchUsersForDate is a day for all users
+export const fetchUsersForDate = functions.https.onRequest(async (req, res) => {
     // query param
     const paramDay: string = req.query.d;
     console.log(paramDay);
@@ -139,6 +139,29 @@ export const fetchUsersDocs = functions.https.onRequest(async (req, res) => {
         res.status(500).send("can't fetch docs");
     });
 });
+
+// fetchDatesForUser is all days for a user
+export const fetchDatesForUser = functions.https.onRequest(async (req, res) => {
+    // query param
+    const paramUser: string = req.query.u;
+    const user: string = (paramUser !== null) ? paramUser : defaultUser;
+    await admin.firestore().collection('attendance_user').doc(user).collection('date').get(
+        ).then(
+            function (querySnapshot) {
+                const doc: {
+                    [user: string]: any;
+                } = {}
+                querySnapshot.forEach(function (resDoc) {
+                    console.log(resDoc.id, " => ", resDoc.data());
+                    doc[resDoc.id] = resDoc.data();
+                });
+                res.send(doc);
+            }
+        ).catch((error) => {
+            res.status(500).send("can't fetch docs");
+        });
+});
+
 
 // makeUserBaseInOut trigger is user base data to ``
 // TODO Should be divide onWrite to onCreate and onUpdate
