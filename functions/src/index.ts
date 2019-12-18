@@ -36,13 +36,13 @@ export const CheckIn = functions.https.onRequest(async (req, res) => {
     // FIX: it is UTC... need JST
     //      year, month, day, hour are wrong.
     const setDate: Date = new Date();
-    const currentMonth: number = setDate.getMonth() + 1;
+    const month: number = setDate.getMonth() + 1;
     // TODO: want to use formatter to doc name
-    const dateDocName: string = setDate.getFullYear().toString() + currentMonth.toString() + setDate.getDate().toString()
+    const dateDocName: string = setDate.getFullYear().toString() + ('00' + month).toString().slice(-2) + setDate.getDate().toString()
     const dateDocRef = fs.collection('attendance').doc(dateDocName);
     await dateDocRef.set({
         year: setDate.getFullYear(),
-        month: currentMonth,
+        month: month,
         day: setDate.getDate(),
         timestamp: now
     });
@@ -81,7 +81,7 @@ export const CheckOut = functions.https.onRequest(async (req, res) => {
         },
         timestamp: now
     }
-    const dateDocName: string = dateDoc.year.toString() + dateDoc.month.toString() + dateDoc.day.toString()
+    const dateDocName: string = setDate.getFullYear().toString() + ('00' + dateDoc.month).toString().slice(-2) + setDate.getDate().toString()
     const dateDocRef = fs.collection('attendance').doc(dateDocName);
     await dateDocRef.set(
         dateDoc,{merge:true}
