@@ -11,9 +11,6 @@ fs.settings(settings);
 
 const defaultUser: string = `yospig`;
 
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-
 export const addMessage = functions.https.onRequest(async (req, res) => {
     // query param
     const msg = req.query.msg;
@@ -54,7 +51,7 @@ export const CheckIn = functions.https.onRequest(async (req, res) => {
     const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
     // merge指定なしの場合とupdateはintimeで値が入っていてもdocumentすべて上書きになる
     await dateUnderUserDocRef.set({
-        in_time_str: setDate.getHours().toString() + ':' + setDate.getMinutes().toString(),
+        in_time_str: ('00' + setDate.getHours()).toString().slice(-2) + ':' + ('00' + setDate.getMinutes()).toString().slice(-2),
         in_time: {
             in_hour: setDate.getHours(),
             in_min: setDate.getMinutes()
@@ -77,7 +74,7 @@ export const CheckOut = functions.https.onRequest(async (req, res) => {
         timestamp: now
     }
     const outTime = {
-        out_time_str: setDate.getHours().toString() + ':' + setDate.getMinutes().toString(),
+        out_time_str: ('00' + setDate.getHours()).toString().slice(-2) + ':' + ('00' + setDate.getMinutes()).toString().slice(-2),
         out_time: {
             out_hour: setDate.getHours(),
             out_min: setDate.getMinutes()
