@@ -33,7 +33,7 @@ export const makeUppercase = functions.database.ref('/messages/{pushId}/original
     return snapshot.ref.parent.child('uppercase').set(uppercase);
 });
 
-// CheckIn
+// CheckIn `/CheckIn?u=xxxxxx`
 export const CheckIn = functions.https.onRequest(async (req, res) => {
     const now: any = admin.firestore.FieldValue.serverTimestamp();
     // FIX: it is UTC... need JST
@@ -66,7 +66,7 @@ export const CheckIn = functions.https.onRequest(async (req, res) => {
     });
 });
 
-// CheckOut
+// CheckOut `/CheckOut?u=xxxxxx`
 export const CheckOut = functions.https.onRequest(async (req, res) => {
     const now: any = admin.firestore.FieldValue.serverTimestamp();
     const setDate: Date = new Date();
@@ -101,8 +101,8 @@ export const CheckOut = functions.https.onRequest(async (req, res) => {
     });
 });
 
-// fetchUserDoc is a day for a one user
-export const fetchUserDoc = functions.https.onRequest(async (req, res) => {
+// fetchUserDate is a day for a one user `/fetchUserDate?u=xxxxxx&d=yyyymmdd`
+export const fetchUserDate = functions.https.onRequest(async (req, res) => {
     // query param
     const paramDay: string = req.query.d;
     const paramUser: string = req.query.u;
@@ -118,7 +118,7 @@ export const fetchUserDoc = functions.https.onRequest(async (req, res) => {
     });
 });
 
-// fetchUsersForDate is a day for all users
+// fetchUsersForDate is a day for all users `/fetchUsersForDate?d=yyyymmdd`
 export const fetchUsersForDate = functions.https.onRequest(async (req, res) => {
     // query param
     const paramDay: string = req.query.d;
@@ -127,7 +127,7 @@ export const fetchUsersForDate = functions.https.onRequest(async (req, res) => {
     ).then(
         function (querySnapshot) {
             const doc: {
-                [key: string]: any;
+                [date: string]: any;
             } = {}
             querySnapshot.forEach(function (resDoc) {
                 console.log(resDoc.id, " => ", resDoc.data());
@@ -140,7 +140,7 @@ export const fetchUsersForDate = functions.https.onRequest(async (req, res) => {
     });
 });
 
-// fetchDatesForUser is all days for a user
+// fetchDatesForUser is all days for a user `/fetchDatesForUser?u=xxxxxx`
 export const fetchDatesForUser = functions.https.onRequest(async (req, res) => {
     // query param
     const paramUser: string = req.query.u;
@@ -163,7 +163,7 @@ export const fetchDatesForUser = functions.https.onRequest(async (req, res) => {
 });
 
 
-// makeUserBaseInOut trigger is user base data to ``
+// makeUserBaseInOut trigger is user base data
 // TODO Should be divide onWrite to onCreate and onUpdate
 export const makeUserBaseInOut = functions.firestore.document("/attendance/{dateId}/user/{userId}").onWrite(async (change, context) => {
     const after = change.after.data();
