@@ -33,8 +33,8 @@ export const makeUppercase = functions.database.ref('/messages/{pushId}/original
     return snapshot.ref.parent.child('uppercase').set(uppercase);
 });
 
-// CheckInTime
-export const CheckInTime = functions.https.onRequest(async (req, res) => {
+// CheckIn
+export const CheckIn = functions.https.onRequest(async (req, res) => {
     const now: any = admin.firestore.FieldValue.serverTimestamp();
     // FIX: it is UTC... need JST
     //      year, month, day, hour are wrong.
@@ -66,8 +66,8 @@ export const CheckInTime = functions.https.onRequest(async (req, res) => {
     });
 });
 
-// CheckOutTime
-export const CheckOutTime = functions.https.onRequest(async (req, res) => {
+// CheckOut
+export const CheckOut = functions.https.onRequest(async (req, res) => {
     const now: any = admin.firestore.FieldValue.serverTimestamp();
     const setDate: Date = new Date();
     const dateDoc = {
