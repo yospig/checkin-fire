@@ -9,26 +9,38 @@ const fs = admin.firestore();
 const settings = { timestampsInSnapshots: true };
 fs.settings(settings);
 
-const defaultUser: string = `yospig`;
+const DEFAULT_USER: string = `yospig`;
 
-export const addMessage = functions.https.onRequest(async (req, res) => {
-    // query param
-    const msg = req.query.msg;
-    // push message to uri
-    const snapshot = await admin.database().ref("/messages").push({ original: msg });
-    res.redirect(303, snapshot.ref.toString());
-});
-
-// makeUppercacse trigger is create data to `/messages/{pushId}/original`
-export const makeUppercase = functions.database.ref('/messages/{pushId}/original').onCreate((snapshot, context) => {
-    const original = snapshot.val();
-    console.log('Uppercasing', context.params.pushId, original);
-    const uppercase = original.toUpperCase();
-    if (!snapshot.ref.parent) {
-        throw new Error("snapshot.ref.parent is null. can't add uppercase");
-    }
-    return snapshot.ref.parent.child('uppercase').set(uppercase);
-});
+// attendance Document
+interface AttendanceDoc {
+    year: number;
+    month: number;
+    day: number;
+    timestamp: string;
+}
+// attendance_user/date Document
+interface AttendanceUserDateDoc {
+    in_time_str: string;
+    in_hour: number;
+    in_min: number;
+    out_time_str: string;
+    out_hour: number;
+    out_min: number;
+}
+// attendance/user Document
+interface AttendanceUserDocIn {
+    in_time_str: string;
+    in_hour: number;
+    in_min: number;
+    timestamp: string;
+}
+// attendance/user Document
+interface AttendanceUserDocOut {
+    out_time_str: string;
+    out_hour: number;
+    out_min: number;
+    timestamp: string;
+}
 
 // CheckIn `/CheckIn?u=xxxxxx`
 export const CheckIn = functions.https.onRequest(async (req, res) => {
@@ -36,28 +48,31 @@ export const CheckIn = functions.https.onRequest(async (req, res) => {
     // FIX: it is UTC... need JST
     //      year, month, day, hour are wrong.
     const setDate: Date = new Date();
-    const month: number = setDate.getMonth() + 1;
-    // TODO: want to use formatter to doc name
-    const dateDocName: string = setDate.getFullYear().toString() + ('00' + month).toString().slice(-2) + setDate.getDate().toString()
-    const dateDocRef = fs.collection('attendance').doc(dateDocName);
-    await dateDocRef.set({
+    const dateDoc: AttendanceDoc = {
         year: setDate.getFullYear(),
-        month: month,
+        month: setDate.getMonth() + 1,
         day: setDate.getDate(),
         timestamp: now
-    });
-    // TODO: Should be separated
-    const user: string = (req.query.u !== null) ? req.query.u : defaultUser;
-    const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
-    // merge指定なしの場合とupdateはintimeで値が入っていてもdocumentすべて上書きになる
-    await dateUnderUserDocRef.set({
+    }
+    const inTime: AttendanceUserDocIn = {
         in_time_str: ('00' + setDate.getHours()).toString().slice(-2) + ':' + ('00' + setDate.getMinutes()).toString().slice(-2),
-        in_time: {
-            in_hour: setDate.getHours(),
-            in_min: setDate.getMinutes()
-        },
+        in_hour: setDate.getHours(),
+        in_min: setDate.getMinutes(),
         timestamp: now
-    }).then(() => {
+    }
+    // TODO: want to use formatter to doc name
+    const dateDocName: string = setDate.getFullYear().toString() + ('00' + dateDoc.month).toString().slice(-2) + setDate.getDate().toString()
+    const dateDocRef = fs.collection('attendance').doc(dateDocName);
+    await dateDocRef.set(
+        dateDoc,{merge:true}
+    );
+    // TODO: Should be separated
+    const user: string = (req.query.u !== null) ? req.query.u : DEFAULT_USER;
+    const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
+    // merge指定しているのでoutTimeの値は上書きされない
+    await dateUnderUserDocRef.set(
+        inTime,{merge:true}
+    ).then(() => {
         console.log("user: ", user, " , intime: ", setDate.toDateString());
         res.send("Add InTime Successful: " + setDate.toDateString());
     });
@@ -67,18 +82,16 @@ export const CheckIn = functions.https.onRequest(async (req, res) => {
 export const CheckOut = functions.https.onRequest(async (req, res) => {
     const now: any = admin.firestore.FieldValue.serverTimestamp();
     const setDate: Date = new Date();
-    const dateDoc = {
+    const dateDoc: AttendanceDoc = {
         year: setDate.getFullYear(),
         month: setDate.getMonth() + 1,
         day: setDate.getDate(),
         timestamp: now
     }
-    const outTime = {
+    const outTime: AttendanceUserDocOut = {
         out_time_str: ('00' + setDate.getHours()).toString().slice(-2) + ':' + ('00' + setDate.getMinutes()).toString().slice(-2),
-        out_time: {
-            out_hour: setDate.getHours(),
-            out_min: setDate.getMinutes()
-        },
+        out_hour: setDate.getHours(),
+        out_min: setDate.getMinutes(),
         timestamp: now
     }
     const dateDocName: string = setDate.getFullYear().toString() + ('00' + dateDoc.month).toString().slice(-2) + setDate.getDate().toString()
@@ -87,7 +100,7 @@ export const CheckOut = functions.https.onRequest(async (req, res) => {
         dateDoc,{merge:true}
     );
     // TODO: Should be separated
-    const user: string = (req.query.u !== null) ? req.query.u : defaultUser;
+    const user: string = (req.query.u !== null) ? req.query.u : DEFAULT_USER;
     const dateUnderUserDocRef = dateDocRef.collection('user').doc(user);
     // merge指定しているのでinTimeの値は上書きされない
     await dateUnderUserDocRef.set(
@@ -103,7 +116,7 @@ export const fetchUserDate = functions.https.onRequest(async (req, res) => {
     // query param
     const paramDay: string = req.query.d;
     const paramUser: string = req.query.u;
-    const user: string = (paramUser !== null) ? paramUser : defaultUser;
+    const user: string = (paramUser !== null) ? paramUser : DEFAULT_USER;
     console.log(paramDay, user);
     await admin.firestore().collection('attendance').doc(paramDay).collection('user').doc(user).get(
     ).then(resDoc => {
@@ -141,7 +154,7 @@ export const fetchUsersForDate = functions.https.onRequest(async (req, res) => {
 export const fetchDatesForUser = functions.https.onRequest(async (req, res) => {
     // query param
     const paramUser: string = req.query.u;
-    const user: string = (paramUser !== null) ? paramUser : defaultUser;
+    const user: string = (paramUser !== null) ? paramUser : DEFAULT_USER;
     await admin.firestore().collection('attendance_user').doc(user).collection('date').get(
         ).then(
             function (querySnapshot) {
@@ -165,39 +178,17 @@ export const fetchDatesForUser = functions.https.onRequest(async (req, res) => {
 export const makeUserBaseInOut = functions.firestore.document("/attendance/{dateId}/user/{userId}").onWrite(async (change, context) => {
     const after = change.after.data();
     const userBaseRef = fs.collection('attendance_user').doc(context.params.userId).collection('date').doc(context.params.dateId);
-    interface DateDTO {
-        in: {
-            in_time_str: string;
-            in_hour: number;
-            in_min: number;
-        }
-        out: {
-            out_time_str: string;
-            out_hour: number;
-            out_min: number;
-        }
-    }
     if (after) {
-        const in_time_str: string = after.in_time !== undefined ? after.in_time_str : "";
-        const in_hour: number = after.in_time !== undefined ? after.in_time.in_hour : 0;
-        const in_min: number = after.in_time !== undefined ? after.in_time.in_min : 0;
-        const out_time_str: string = after.out_time !== undefined ? after.out_time_str : "";
-        const out_hour: number = after.out_time !== undefined ? after.out_time.out_hour : 0;
-        const out_min: number = after.out_time !== undefined ? after.out_time.out_min : 0;
-        const d: DateDTO = {
-            in: {
-                in_time_str: in_time_str,
-                in_hour: in_hour,
-                in_min: in_min
-            },
-            out: {
-                out_time_str: out_time_str,
-                out_hour: out_hour,
-                out_min: out_min
-            }
+        const dto: AttendanceUserDateDoc = {
+            in_time_str: after.in_time_str !== undefined ? after.in_time_str : "",
+            in_hour: after.in_hour !== undefined ? after.in_hour : 0,
+            in_min: after.in_min !== undefined ? after.in_min : 0,
+            out_time_str: after.out_time_str !== undefined ? after.out_time_str : "",
+            out_hour: after.out_hour !== undefined ? after.out_hour : 0,
+            out_min: after.out_min !== undefined ? after.out_min : 0
         };
         await userBaseRef.set(
-            d,{merge:true}
+            dto,{merge:true}
         );
     }
 });
@@ -217,5 +208,24 @@ export const fizzbuzz = functions.https.onRequest((request, response) => {
         }
     }
     response.send(fb);
+});
+
+export const addMessage = functions.https.onRequest(async (req, res) => {
+    // query param
+    const msg = req.query.msg;
+    // push message to uri
+    const snapshot = await admin.database().ref("/messages").push({ original: msg });
+    res.redirect(303, snapshot.ref.toString());
+});
+
+// makeUppercacse trigger is create data to `/messages/{pushId}/original`
+export const makeUppercase = functions.database.ref('/messages/{pushId}/original').onCreate((snapshot, context) => {
+    const original = snapshot.val();
+    console.log('Uppercasing', context.params.pushId, original);
+    const uppercase = original.toUpperCase();
+    if (!snapshot.ref.parent) {
+        throw new Error("snapshot.ref.parent is null. can't add uppercase");
+    }
+    return snapshot.ref.parent.child('uppercase').set(uppercase);
 });
 
